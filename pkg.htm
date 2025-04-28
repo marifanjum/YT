@@ -1,40 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fixed Frame Image Dragging</title>
-<style>
-  body {
-    margin: 0;
-    background-color: #202447;
-  }
-  #canvasContainer {
-    position: relative;
-    width: 1920px;
-    height: 1080px;
-    margin: 0 auto;
-    overflow: hidden;
-  }
-  canvas {
-    display: block;
-    background: transparent;
-  }
-  #controls {
-    text-align: center;
-    margin-top: 20px;
-  }
-  button, input {
-    margin: 5px;
-    padding: 10px;
-    font-size: 16px;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fixed Frame Image Dragging</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #202447;
+	  color: #fff;
+    }
+    #canvasContainer {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      background: transparent;
+    }
+    #controls {
+      text-align: center;
+      margin-top: 20px;
+    }
+    button, input {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .slider-container {
+      margin-top: 20px;
+    }
+    .slider-container label {
+      display: block;
+      margin: 5px 0;
+    }
+  </style>
 </head>
 <body>
 
 <div id="canvasContainer">
-<button onclick="scaleImage(0, 1.1)">Zoom In Image 1</button>
+  <button onclick="scaleImage(0, 1.1)">Zoom In Image 1</button>
   <button onclick="scaleImage(0, 0.9)">Zoom Out Image 1</button>
   <button onclick="scaleImage(1, 1.1)">Zoom In Image 2</button>
   <button onclick="scaleImage(1, 0.9)">Zoom Out Image 2</button>
@@ -46,34 +54,51 @@
   <input type="file" id="uploadImage1" accept="image/*">
   <input type="file" id="uploadImage2" accept="image/*"><br>
   
-    <input type="text" id="headlineInput" placeholder="Enter headline" size="100">
+  <input type="text" id="headlineInput" placeholder="Enter headline" size="100">
   <br><br>
-  <label for="firstLineWordCount">First Line Word Count: </label>
-  <input type="number" id="firstLineWordCount" min="1" value="8"><br><br>
-  <label for="wordSpacing">Word Spacing: </label>
-  <input type="number" id="wordSpacing" min="1" value="-20"><br><br>
 
-  <label for="headlineX">Headline X: </label>
-  <input type="number" id="headlineX" value="1900"><br><br>
-  
-  <label for="headlineY">Headline Y: </label>
-  <input type="number" id="headlineY" value="50"><br><br>
+  <div class="slider-container">
+    <label for="headlineX">Headline X: </label>
+    <input type="range" id="headlineX" min="0" max="1920" value="1900">
+    <span id="headlineXLabel">1900</span><br><br>
+    
+    <label for="headlineY">Headline Y: </label>
+    <input type="range" id="headlineY" min="0" max="1080" value="50">
+    <span id="headlineYLabel">50</span><br><br>
+    
+    <label for="wordSpacing">Word Spacing (px): </label>
+    <input type="number" id="wordSpacing" value="10"><br><br>
 
-<button id="updateCanvasButton">Update...! </button>
+    <label for="fontSize">Font Size (px): </label>
+    <input type="number" id="fontSize" value="160"><br><br>
 
- <button id="downloadButton">Download Image</button> 
-  
-  
+    <label for="lineHeight">Line Height (multiplier): </label>
+    <input type="number" id="lineHeight" step="0.1" value="1.2"><br><br>
+
+    <label for="firstLineCount">First Line Word Count: </label>
+    <input type="number" id="firstLineCount" value="0"><br><br>
+  </div>
+
+  <button id="updateCanvasButton">Update...!</button>
+  <button id="downloadButton">Download Image</button>
 </div>
+
 
 <script>
 const canvas = document.getElementById('newsCanvas');
 const ctx = canvas.getContext('2d');
 
+const logo = new Image();
+logo.src = 'round-logo.png';
+logo.onload = function() {
+  drawAll(); 
+};
+
+
 const headlineInput = document.getElementById('headlineInput');
-const generateButton = document.getElementById('generateButton');
-const firstLineWordCountInput = document.getElementById('firstLineWordCount');
-const wordSpacingInput = document.getElementById('wordSpacing');
+const headlineXInput = document.getElementById('headlineX');
+const headlineYInput = document.getElementById('headlineY');
+
 
 
 let images = [null, null];
@@ -91,7 +116,6 @@ const frames = [
 // Upload images
 document.getElementById('uploadImage1').addEventListener('change', (e) => loadImage(e, 0));
 document.getElementById('uploadImage2').addEventListener('change', (e) => loadImage(e, 1));
-
 
 function loadImage(e, index) {
   const file = e.target.files[0];
@@ -140,18 +164,63 @@ function scaleImage(index, factor) {
   drawAll();
 }
 
+// Drag functionality
+let isMouseDown = false;
+let dragImageIndex = -1;
+
+canvas.addEventListener('mousedown', (e) => {
+  const mouseX = e.offsetX;
+  const mouseY = e.offsetY;
+  
+  for (let i = 0; i < 2; i++) {
+    const imgPos = imagePositions[i];
+    const img = images[i];
+    const scaledWidth = img.width * imgPos.scale;
+    const scaledHeight = img.height * imgPos.scale;
+    
+    if (
+      mouseX >= imgPos.x && mouseX <= imgPos.x + scaledWidth &&
+      mouseY >= imgPos.y && mouseY <= imgPos.y + scaledHeight
+    ) {
+      isMouseDown = true;
+      dragImageIndex = i;
+      imgPos.offsetX = mouseX - imgPos.x;
+      imgPos.offsetY = mouseY - imgPos.y;
+      break;
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (isMouseDown && dragImageIndex !== -1) {
+    const imgPos = imagePositions[dragImageIndex];
+    imgPos.x = e.offsetX - imgPos.offsetX;
+    imgPos.y = e.offsetY - imgPos.offsetY;
+    drawAll();
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  isMouseDown = false;
+  dragImageIndex = -1;
+});
+
+canvas.addEventListener('mouseout', () => {
+  isMouseDown = false;
+  dragImageIndex = -1;
+});
+
 // Draw everything
 function drawAll() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-   // Create gradient for the canvas background
+  // Create gradient for the canvas background
   const gradient = ctx.createLinearGradient(0, 0, 0, 200); // Top to Bottom gradient
   gradient.addColorStop(0, '#303569');  // Dark color at the top
   gradient.addColorStop(1, '#202447');  // Lighter color at the bottom
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height); // Apply gradient as background
   
-
   for (let i = 0; i < 2; i++) {
     if (images[i]) {
       const img = images[i];
@@ -174,9 +243,9 @@ function drawAll() {
   
   drawWrappedText(headlineInput.value);
 
-  // Draw the logo at the bottom-left corner
+  if (logo.complete) {
   ctx.drawImage(logo, -240, canvas.height - logo.height - (-120));
-  
+}
 }
 
 // Split text into words including special characters for Urdu
@@ -184,48 +253,40 @@ function splitWords(text) {
   return text.match(/<[^>]+>|[^<>؀-ۿ]+|[؀-ۿ]+/g) || [];
 }
 
-
 function drawWrappedText(text) {
   ctx.save();
-  ctx.font = 'bold 160px "Alvi Lahori Nastaleeq", "Noto Nastaliq Urdu", serif';
+
+  const fontSize = parseInt(document.getElementById('fontSize').value) || 160;
+  const lineHeightMultiplier = parseFloat(document.getElementById('lineHeight').value) || 1.2;
+  const wordSpacing = parseInt(document.getElementById('wordSpacing').value) || 10;
+  const firstLineCount = parseInt(document.getElementById('firstLineCount').value) || 0;
+
+  ctx.font = `bold ${fontSize}px "Alvi Lahori Nastaleeq", "Noto Nastaliq Urdu", serif`;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
   ctx.direction = 'rtl';
 
   const words = splitWords(text);
-  const wordCount = words.length;
+  const lines = [];
 
-  // Get first line word count from user input
-  const firstLineWordCount = parseInt(firstLineWordCountInput.value) || 8;
-
-  // Adjust lines based on user input
-  let lines = [];
-  if (wordCount > firstLineWordCount) {
-    const firstLine = words.slice(0, firstLineWordCount);
-    const secondLine = words.slice(firstLineWordCount);
-    lines.push(firstLine);
-    lines.push(secondLine);
+  if (firstLineCount > 0 && words.length > firstLineCount) {
+    lines.push(words.slice(0, firstLineCount));
+    lines.push(words.slice(firstLineCount));
   } else {
     lines.push(words);
   }
 
-  const startY = 60;
-  const lineHeight = 180;
-
-  // Get the word spacing value from the input
-  const wordSpacing = parseInt(wordSpacingInput.value) || -20;
-
-  // Get the x and y coordinates for the headline from the input fields
-  const headlineX = parseInt(document.getElementById('headlineX').value) || 1900;  // Default to canvas center
-  const headlineY = parseInt(document.getElementById('headlineY').value) || 50;   // Default to 50px from top
+  const startX = parseInt(document.getElementById('headlineX').value) || 1900;
+  const startY = parseInt(document.getElementById('headlineY').value) || 50;
+  const lineHeight = fontSize * lineHeightMultiplier;
 
   lines.forEach((lineWords, index) => {
     let totalWidth = 0;
     lineWords.forEach(word => {
-      totalWidth += ctx.measureText(word.replace(/[<>]/g, '') + ' ').width;
+      totalWidth += ctx.measureText(word.replace(/[<>]/g, '')).width + wordSpacing;
     });
 
-    let x = headlineX;
+    let x = startX;
 
     lineWords.forEach(word => {
       const isHighlight = word.startsWith('<') && word.endsWith('>');
@@ -233,106 +294,45 @@ function drawWrappedText(text) {
 
       ctx.strokeStyle = '#900000';
       ctx.lineWidth = 4;
-      ctx.strokeText(cleanWord, x, headlineY + index * lineHeight);
+      ctx.strokeText(cleanWord, x, startY + index * lineHeight);
 
       ctx.fillStyle = isHighlight ? '#fff000' : 'white';
-      ctx.fillText(cleanWord, x, headlineY + index * lineHeight);
+      ctx.fillText(cleanWord, x, startY + index * lineHeight);
 
-      // Adjust x position by considering word spacing
-      x -= ctx.measureText(cleanWord + ' ').width + wordSpacing;
+      x -= ctx.measureText(cleanWord).width + wordSpacing;
     });
   });
 
   ctx.restore();
-} 
-
-const logo = new Image();  // Logo image
-logo.src = 'round-logo.png'; // Load the logo image
+}
 
 
-
-document.getElementById('wordSpacing').addEventListener('input', (e) => {
-  drawAll();  // Call the drawAll function to update the canvas
-});
-
-// Event listener for "Update Canvas" button
+// Event listener for the "Update" button
 document.getElementById('updateCanvasButton').addEventListener('click', () => {
-  drawAll();  // Update the canvas when the button is clicked
-});
-
-// Add event listeners to the elements that affect the canvas
-document.getElementById('firstLineWordCount').addEventListener('input', () => {
-  // Optionally, store changes here, if needed
-});
-
-document.getElementById('headlineX').addEventListener('input', () => {
-  // Optionally, store changes here, if needed
-});
-
-document.getElementById('headlineY').addEventListener('input', () => {
-  // Optionally, store changes here, if needed
-});
-
-document.getElementById('headlineInput').addEventListener('input', () => {
-  // Optionally, store changes here, if needed
-});
-
-
-// Handle dragging
-canvas.addEventListener('mousedown', (e) => {
-  const mouseX = e.offsetX;
-  const mouseY = e.offsetY;
-
-  for (let i = 0; i < 2; i++) {
-    const frame = frames[i];
-    if (
-      mouseX >= frame.x && mouseX <= frame.x + frame.width &&
-      mouseY >= frame.y && mouseY <= frame.y + frame.height
-    ) {
-      imagePositions[i].dragging = true;
-      imagePositions[i].offsetX = mouseX - imagePositions[i].x;
-      imagePositions[i].offsetY = mouseY - imagePositions[i].y;
-    }
-  }
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  const mouseX = e.offsetX;
-  const mouseY = e.offsetY;
-
-  for (let i = 0; i < 2; i++) {
-    if (imagePositions[i].dragging) {
-      imagePositions[i].x = mouseX - imagePositions[i].offsetX;
-      imagePositions[i].y = mouseY - imagePositions[i].offsetY;
-      drawAll();
-    }
-  }
-});
-
-canvas.addEventListener('mouseup', () => {
-  imagePositions.forEach(pos => pos.dragging = false);
-});
-
-document.getElementById('downloadButton').addEventListener('click', function() {
-  // Ensure the canvas is up-to-date
   drawAll();
-
-  // Create a data URL of the canvas content (PNG format)
-  const dataUrl = canvas.toDataURL('image/png');
-
-  // Create an anchor element to trigger the download
-  const link = document.createElement('a');
-  link.href = dataUrl;  // Set the href to the data URL of the canvas image
-  link.download = 'canvas-image.png';  // Set the default download file name
-  
-  // Append the link to the document and trigger the click event to download
-  document.body.appendChild(link);  // Temporarily append the link element
-  link.click();  // Simulate a click to trigger the download
-  document.body.removeChild(link);  // Remove the link element after download
 });
+
+// Update labels when sliders change
+headlineXInput.addEventListener('input', function() {
+  document.getElementById('headlineXLabel').textContent = this.value;
+  drawAll();
+});
+
+headlineYInput.addEventListener('input', function() {
+  document.getElementById('headlineYLabel').textContent = this.value;
+  drawAll();
+});
+
+// Event listener for the "Download" button
+document.getElementById('downloadButton').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'thumbnail.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
 
 
 </script>
-
 </body>
 </html>
