@@ -76,7 +76,7 @@
   <input type="number" id="fontSize" value="250"><br><br>
 
   <label for="lineHeight">Line Height (px): </label>
-  <input type="number" id="lineHeight" value="260"><br><br>
+  <input type="number" id="lineHeight" value="350"><br><br>
 
   <button id="updateCanvasButton">Update...!</button>
   <button id="downloadButton">Download Image</button>
@@ -170,8 +170,8 @@ function splitWords(text) {
 function drawWrappedText(text) {
   ctx.save();
 
-  const fontSize = parseInt(document.getElementById('fontSize').value) || 180;
-  const lineHeight = parseInt(document.getElementById('lineHeight').value) || 220;
+  const fontSize = parseInt(document.getElementById('fontSize').value) || 250;
+  const lineHeight = parseInt(document.getElementById('lineHeight').value) || 350;
 
   ctx.font = `bold ${fontSize}px "Alvi Lahori Nastaleeq", "Noto Nastaliq Urdu", serif`;
   ctx.textAlign = 'right';
