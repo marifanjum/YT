@@ -58,8 +58,12 @@
   <br><br>
 
   <div class="slider-container">
+
+	<label for="firstLineCount">First Line Word Count: </label>
+    <input type="number" id="firstLineCount" value="12"><br><br>
+
     <label for="headlineX">Headline X: </label>
-    <input type="range" id="headlineX" min="0" max="1920" value="1900">
+    <input type="range" id="headlineX" min="0" max="1920" value="1570">
     <span id="headlineXLabel">1900</span><br><br>
     
     <label for="headlineY">Headline Y: </label>
@@ -67,7 +71,7 @@
     <span id="headlineYLabel">50</span><br><br>
     
     <label for="wordSpacing">Word Spacing (px): </label>
-    <input type="number" id="wordSpacing" value="10"><br><br>
+    <input type="number" id="wordSpacing" value="-10"><br><br>
 
     <label for="fontSize">Font Size (px): </label>
     <input type="number" id="fontSize" value="160"><br><br>
@@ -75,8 +79,6 @@
     <label for="lineHeight">Line Height (multiplier): </label>
     <input type="number" id="lineHeight" step="0.1" value="1.2"><br><br>
 
-    <label for="firstLineCount">First Line Word Count: </label>
-    <input type="number" id="firstLineCount" value="0"><br><br>
   </div>
 
   <button id="updateCanvasButton">Update...!</button>
@@ -258,8 +260,8 @@ function drawWrappedText(text) {
 
   const fontSize = parseInt(document.getElementById('fontSize').value) || 160;
   const lineHeightMultiplier = parseFloat(document.getElementById('lineHeight').value) || 1.2;
-  const wordSpacing = parseInt(document.getElementById('wordSpacing').value) || 10;
-  const firstLineCount = parseInt(document.getElementById('firstLineCount').value) || 0;
+  const wordSpacing = parseInt(document.getElementById('wordSpacing').value) || -20;
+  const firstLineCount = parseInt(document.getElementById('firstLineCount').value) || 12;
 
   ctx.font = `bold ${fontSize}px "Alvi Lahori Nastaleeq", "Noto Nastaliq Urdu", serif`;
   ctx.textAlign = 'right';
