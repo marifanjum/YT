@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixed Frame Image Dragging</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #202447;
+  }
+  #canvasContainer {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    background: transparent;
+  }
+  #controls {
+    text-align: center;
+    margin-top: 20px;
+  }
+  button, input {
+    margin: 5px;
+    padding: 10px;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div id="canvasContainer">
+<button onclick="scaleImage(0, 1.1)">Zoom In Image 1</button>
+  <button onclick="scaleImage(0, 0.9)">Zoom Out Image 1</button>
+  <button onclick="scaleImage(1, 1.1)">Zoom In Image 2</button>
+  <button onclick="scaleImage(1, 0.9)">Zoom Out Image 2</button>
+  
+  <canvas id="newsCanvas" width="1920" height="1080"></canvas>
+</div>
+
+<div id="controls">
+  <input type="file" id="uploadImage1" accept="image/*">
+  <input type="file" id="uploadImage2" accept="image/*"><br>
+  
+    <input type="text" id="headlineInput" placeholder="Enter headline" size="100">
+  <br><br>
+  <label for="firstLineWordCount">First Line Word Count: </label>
+  <input type="number" id="firstLineWordCount" min="1" value="8"><br><br>
+  <label for="wordSpacing">Word Spacing: </label>
+  <input type="number" id="wordSpacing" min="1" value="-20"><br><br>
+
+  <label for="headlineX">Headline X: </label>
+  <input type="number" id="headlineX" value="1900"><br><br>
+  
+  <label for="headlineY">Headline Y: </label>
+  <input type="number" id="headlineY" value="50"><br><br>
+
+<button id="updateCanvasButton">Update...! </button>
+
+ <button id="downloadButton">Download Image</button> 
+  
+  
+</div>
+
+<script>
+const canvas = document.getElementById('newsCanvas');
+const ctx = canvas.getContext('2d');
+
+const headlineInput = document.getElementById('headlineInput');
+const generateButton = document.getElementById('generateButton');
+const firstLineWordCountInput = document.getElementById('firstLineWordCount');
+const wordSpacingInput = document.getElementById('wordSpacing');
+
+
+let images = [null, null];
+let imagePositions = [
+  { x: 0, y: 0, scale: 1, dragging: false, offsetX: 0, offsetY: 0 },
+  { x: 0, y: 0, scale: 1, dragging: false, offsetX: 0, offsetY: 0 }
+];
+
+// Fixed frame areas
+const frames = [
+  { x: 0, y: 360, width: 960, height: 780 },
+  { x: 960, y: 360, width: 960, height: 780 }
+];
+
+// Upload images
+document.getElementById('uploadImage1').addEventListener('change', (e) => loadImage(e, 0));
+document.getElementById('uploadImage2').addEventListener('change', (e) => loadImage(e, 1));
+
+
+function loadImage(e, index) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const img = new Image();
+      img.onload = function() {
+        images[index] = img;
+
+        // Center the image inside the frame initially
+        const aspectRatio = img.width / img.height;
+        const frame = frames[index];
+        const frameRatio = frame.width / frame.height;
+        
+        let startX = 0;
+        let startY = 0;
+
+        if (aspectRatio > frameRatio) {
+          // Image is wider
+          const displayWidth = frame.height * aspectRatio;
+          startX = frame.x + (frame.width - displayWidth) / 2;
+          startY = frame.y;
+        } else {
+          // Image is taller
+          const displayHeight = frame.width / aspectRatio;
+          startX = frame.x;
+          startY = frame.y + (frame.height - displayHeight) / 2;
+        }
+
+        imagePositions[index].x = startX;
+        imagePositions[index].y = startY;
+        imagePositions[index].scale = 1;
+
+        drawAll();
+      }
+      img.src = evt.target.result;
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
+// Zoom function
+function scaleImage(index, factor) {
+  imagePositions[index].scale *= factor;
+  drawAll();
+}
+
+// Draw everything
+function drawAll() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+   // Create gradient for the canvas background
+  const gradient = ctx.createLinearGradient(0, 0, 0, 200); // Top to Bottom gradient
+  gradient.addColorStop(0, '#303569');  // Dark color at the top
+  gradient.addColorStop(1, '#202447');  // Lighter color at the bottom
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height); // Apply gradient as background
+  
+
+  for (let i = 0; i < 2; i++) {
+    if (images[i]) {
+      const img = images[i];
+      const pos = imagePositions[i];
+      const frame = frames[i];
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(frame.x, frame.y, frame.width, frame.height);
+      ctx.clip();
+
+      const scaledWidth = img.width * pos.scale;
+      const scaledHeight = img.height * pos.scale;
+
+      ctx.drawImage(img, pos.x, pos.y, scaledWidth, scaledHeight);
+
+      ctx.restore();
+    }
+  }
+  
+  drawWrappedText(headlineInput.value);
+
+  // Draw the logo at the bottom-left corner
+  ctx.drawImage(logo, -240, canvas.height - logo.height - (-120));
+  
+}
+
+// Split text into words including special characters for Urdu
+function splitWords(text) {
+  return text.match(/<[^>]+>|[^<>؀-ۿ]+|[؀-ۿ]+/g) || [];
+}
+
+
+function drawWrappedText(text) {
+  ctx.save();
+  ctx.font = 'bold 160px "Alvi Lahori Nastaleeq", "Noto Nastaliq Urdu", serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.direction = 'rtl';
+
+  const words = splitWords(text);
+  const wordCount = words.length;
+
+  // Get first line word count from user input
+  const firstLineWordCount = parseInt(firstLineWordCountInput.value) || 8;
+
+  // Adjust lines based on user input
+  let lines = [];
+  if (wordCount > firstLineWordCount) {
+    const firstLine = words.slice(0, firstLineWordCount);
+    const secondLine = words.slice(firstLineWordCount);
+    lines.push(firstLine);
+    lines.push(secondLine);
+  } else {
+    lines.push(words);
+  }
+
+  const startY = 60;
+  const lineHeight = 180;
+
+  // Get the word spacing value from the input
+  const wordSpacing = parseInt(wordSpacingInput.value) || -20;
+
+  // Get the x and y coordinates for the headline from the input fields
+  const headlineX = parseInt(document.getElementById('headlineX').value) || 1900;  // Default to canvas center
+  const headlineY = parseInt(document.getElementById('headlineY').value) || 50;   // Default to 50px from top
+
+  lines.forEach((lineWords, index) => {
+    let totalWidth = 0;
+    lineWords.forEach(word => {
+      totalWidth += ctx.measureText(word.replace(/[<>]/g, '') + ' ').width;
+    });
+
+    let x = headlineX;
+
+    lineWords.forEach(word => {
+      const isHighlight = word.startsWith('<') && word.endsWith('>');
+      const cleanWord = word.replace(/[<>]/g, '');
+
+      ctx.strokeStyle = '#900000';
+      ctx.lineWidth = 4;
+      ctx.strokeText(cleanWord, x, headlineY + index * lineHeight);
+
+      ctx.fillStyle = isHighlight ? '#fff000' : 'white';
+      ctx.fillText(cleanWord, x, headlineY + index * lineHeight);
+
+      // Adjust x position by considering word spacing
+      x -= ctx.measureText(cleanWord + ' ').width + wordSpacing;
+    });
+  });
+
+  ctx.restore();
+} 
+
+const logo = new Image();  // Logo image
+logo.src = 'round-logo.png'; // Load the logo image
+
+
+
+document.getElementById('wordSpacing').addEventListener('input', (e) => {
+  drawAll();  // Call the drawAll function to update the canvas
+});
+
+// Event listener for "Update Canvas" button
+document.getElementById('updateCanvasButton').addEventListener('click', () => {
+  drawAll();  // Update the canvas when the button is clicked
+});
+
+// Add event listeners to the elements that affect the canvas
+document.getElementById('firstLineWordCount').addEventListener('input', () => {
+  // Optionally, store changes here, if needed
+});
+
+document.getElementById('headlineX').addEventListener('input', () => {
+  // Optionally, store changes here, if needed
+});
+
+document.getElementById('headlineY').addEventListener('input', () => {
+  // Optionally, store changes here, if needed
+});
+
+document.getElementById('headlineInput').addEventListener('input', () => {
+  // Optionally, store changes here, if needed
+});
+
+
+// Handle dragging
+canvas.addEventListener('mousedown', (e) => {
+  const mouseX = e.offsetX;
+  const mouseY = e.offsetY;
+
+  for (let i = 0; i < 2; i++) {
+    const frame = frames[i];
+    if (
+      mouseX >= frame.x && mouseX <= frame.x + frame.width &&
+      mouseY >= frame.y && mouseY <= frame.y + frame.height
+    ) {
+      imagePositions[i].dragging = true;
+      imagePositions[i].offsetX = mouseX - imagePositions[i].x;
+      imagePositions[i].offsetY = mouseY - imagePositions[i].y;
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const mouseX = e.offsetX;
+  const mouseY = e.offsetY;
+
+  for (let i = 0; i < 2; i++) {
+    if (imagePositions[i].dragging) {
+      imagePositions[i].x = mouseX - imagePositions[i].offsetX;
+      imagePositions[i].y = mouseY - imagePositions[i].offsetY;
+      drawAll();
+    }
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  imagePositions.forEach(pos => pos.dragging = false);
+});
+
+document.getElementById('downloadButton').addEventListener('click', function() {
+  // Ensure the canvas is up-to-date
+  drawAll();
+
+  // Create a data URL of the canvas content (PNG format)
+  const dataUrl = canvas.toDataURL('image/png');
+
+  // Create an anchor element to trigger the download
+  const link = document.createElement('a');
+  link.href = dataUrl;  // Set the href to the data URL of the canvas image
+  link.download = 'canvas-image.png';  // Set the default download file name
+  
+  // Append the link to the document and trigger the click event to download
+  document.body.appendChild(link);  // Temporarily append the link element
+  link.click();  // Simulate a click to trigger the download
+  document.body.removeChild(link);  // Remove the link element after download
+});
+
+
+</script>
+
+</body>
+</html>
