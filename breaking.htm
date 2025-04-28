@@ -298,6 +298,44 @@ document.getElementById('downloadButton').addEventListener('click', () => {
   link.click();
   document.body.removeChild(link);
 });
+
+  // Touch events for mobile dragging
+canvas.addEventListener('touchstart', (e) => {
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const touchX = touch.clientX - rect.left;
+  const touchY = touch.clientY - rect.top;
+
+  if (touchX >= backgroundPosition.x && touchX <= backgroundPosition.x + backgroundImage.width * backgroundPosition.scale &&
+      touchY >= backgroundPosition.y && touchY <= backgroundPosition.y + backgroundImage.height * backgroundPosition.scale) {
+    backgroundPosition.dragging = true;
+    backgroundPosition.offsetX = touchX - backgroundPosition.x;
+    backgroundPosition.offsetY = touchY - backgroundPosition.y;
+  }
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  if (backgroundPosition.dragging) {
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const touchX = touch.clientX - rect.left;
+    const touchY = touch.clientY - rect.top;
+
+    backgroundPosition.x = touchX - backgroundPosition.offsetX;
+    backgroundPosition.y = touchY - backgroundPosition.offsetY;
+    drawAll();
+
+    // Prevent scrolling while dragging
+    e.preventDefault();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+  backgroundPosition.dragging = false;
+});
+
+
+  
 </script>
 
 </body>
